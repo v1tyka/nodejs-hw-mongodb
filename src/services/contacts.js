@@ -1,11 +1,24 @@
 import { Contact } from '../models/contact.js';
 
-// Повертає всі контакти
 export const getAllContacts = async () => {
   return await Contact.find();
 };
 
-// Повертає контакт за ID
-export const getContactById = async (id) => {
-  return await Contact.findById(id);
+export const getContactById = async (contactId) => {
+  return await Contact.findById(contactId);
+};
+
+export const createNewContact = async (body) => {
+  return await Contact.create(body);
+};
+
+export const updateContact = async (contactId, body) => {
+  return await Contact.findByIdAndUpdate(contactId, body, {
+    new: true,
+    runValidators: true,
+  });
+};
+
+export const deleteContact = async (contactId) => {
+  return await Contact.findByIdAndDelete(contactId);
 };

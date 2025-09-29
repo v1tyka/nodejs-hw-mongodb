@@ -1,7 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import pino from 'pino-http';
-import { fetchAllContacts, fetchContactById } from './controllers/contacts.js';
+import contactsRouter from './routers/contacts.js';
+import { errorHandler } from './middlewares/errorHandler.js';
+import { notFoundHandler } from './middlewares/notFoundHandler.js';
 
 export const setupServer = () => {
   const app = express();
@@ -10,16 +12,14 @@ export const setupServer = () => {
   app.use(pino());
   app.use(express.json());
 
-  // --- Роут для отримання всіх контактів ---
-  app.get('/contacts', fetchAllContacts);
+  // маршрути
+  app.use('/contacts', contactsRouter);
 
-  // --- Роут для отримання контакту за ID ---
-  app.get('/contacts/:contactId', fetchContactById);
+  // 404
+  app.use(notFoundHandler);
 
-  // Обробка неіснуючих маршрутів
-  app.use((req, res) => {
-    res.status(404).json({ message: 'Not found' });
-  });
+  // обробка помилок
+  app.use(errorHandler);
 
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {

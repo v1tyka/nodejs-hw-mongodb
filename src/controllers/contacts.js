@@ -1,7 +1,15 @@
-import { getAllContacts, getContactById } from '../services/contacts.js';
+import createError from 'http-errors';
+import {
+  getAllContacts,
+  getContactById,
+  createNewContact,
+  updateContact,
+  deleteContact,
+} from '../services/contacts.js';
 
-// Контролер для всіх контактів
-export const fetchAllContacts = async (req, res) => {
+/* eslint-disable no-unused-vars */
+
+export const fetchAllContacts = async (req, res, next) => {
   const contacts = await getAllContacts();
   res.status(200).json({
     status: 200,
@@ -10,13 +18,14 @@ export const fetchAllContacts = async (req, res) => {
   });
 };
 
-// Контролер для контакту по ID
-export const fetchContactById = async (req, res) => {
+/* eslint-disable no-unused-vars */
+
+export const fetchContactById = async (req, res, next) => {
   const { contactId } = req.params;
   const contact = await getContactById(contactId);
 
   if (!contact) {
-    return res.status(404).json({ message: 'Contact not found' });
+    throw createError(404, 'Contact not found');
   }
 
   res.status(200).json({
@@ -24,4 +33,40 @@ export const fetchContactById = async (req, res) => {
     message: `Successfully found contact with id ${contactId}!`,
     data: contact,
   });
+};
+
+export const createContact = async (req, res, next) => {
+  const newContact = await createNewContact(req.body);
+
+  res.status(201).json({
+    status: 201,
+    message: 'Successfully created a contact!',
+    data: newContact,
+  });
+};
+
+export const patchContact = async (req, res, next) => {
+  const { contactId } = req.params;
+  const updatedContact = await updateContact(contactId, req.body);
+
+  if (!updatedContact) {
+    throw createError(404, 'Contact not found');
+  }
+
+  res.status(200).json({
+    status: 200,
+    message: 'Successfully patched a contact!',
+    data: updatedContact,
+  });
+};
+
+export const removeContact = async (req, res, next) => {
+  const { contactId } = req.params;
+  const deletedContact = await deleteContact(contactId);
+
+  if (!deletedContact) {
+    throw createError(404, 'Contact not found');
+  }
+
+  res.status(204).send(); // ✅ 204 No Content, без body
 };
