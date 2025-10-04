@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import createError from 'http-errors';
 import {
   getAllContacts,
@@ -7,10 +8,27 @@ import {
   deleteContact,
 } from '../services/contacts.js';
 
-/* eslint-disable no-unused-vars */
-
+// --- GET /contacts ---
+// Підтримує пагінацію, сортування і фільтрацію
 export const fetchAllContacts = async (req, res, next) => {
-  const contacts = await getAllContacts();
+  const {
+    page = 1,
+    perPage = 10,
+    sortBy = 'name',
+    sortOrder = 'asc',
+    type,
+    isFavourite,
+  } = req.query;
+
+  const contacts = await getAllContacts(
+    Number(page),
+    Number(perPage),
+    sortBy,
+    sortOrder,
+    type,
+    isFavourite
+  );
+
   res.status(200).json({
     status: 200,
     message: 'Successfully found contacts!',
@@ -18,8 +36,7 @@ export const fetchAllContacts = async (req, res, next) => {
   });
 };
 
-/* eslint-disable no-unused-vars */
-
+// --- GET /contacts/:contactId ---
 export const fetchContactById = async (req, res, next) => {
   const { contactId } = req.params;
   const contact = await getContactById(contactId);
@@ -35,6 +52,7 @@ export const fetchContactById = async (req, res, next) => {
   });
 };
 
+// --- POST /contacts ---
 export const createContact = async (req, res, next) => {
   const newContact = await createNewContact(req.body);
 
@@ -45,6 +63,7 @@ export const createContact = async (req, res, next) => {
   });
 };
 
+// --- PATCH /contacts/:contactId ---
 export const patchContact = async (req, res, next) => {
   const { contactId } = req.params;
   const updatedContact = await updateContact(contactId, req.body);
@@ -60,6 +79,7 @@ export const patchContact = async (req, res, next) => {
   });
 };
 
+// --- DELETE /contacts/:contactId ---
 export const removeContact = async (req, res, next) => {
   const { contactId } = req.params;
   const deletedContact = await deleteContact(contactId);
@@ -68,5 +88,5 @@ export const removeContact = async (req, res, next) => {
     throw createError(404, 'Contact not found');
   }
 
-  res.status(204).send(); // ✅ 204 No Content, без body
+  res.status(204).send(); // ✅ 204 No Content
 };
