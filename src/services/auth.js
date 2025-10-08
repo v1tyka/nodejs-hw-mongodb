@@ -1,25 +1,23 @@
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import createHttpError from 'http-errors';
 import { User } from '../models/user.js';
 import { Session } from '../models/session.js';
 
+const ACCESS_TOKEN_LIFETIME = 15 * 60 * 1000; // 15 хв
+const REFRESH_TOKEN_LIFETIME = 30 * 24 * 60 * 60 * 1000; // 30 днів
 const JWT_SECRET = process.env.JWT_SECRET;
-const ACCESS_TOKEN_EXPIRY = 15 * 60 * 1000; // 15 min
-const REFRESH_TOKEN_EXPIRY = 30 * 24 * 60 * 60 * 1000; // 30 days
 
-export const registerUserService = async (userData) => {
-  const { name, email, password } = userData;
-
+export const createUserService = async ({ name, email, password }) => {
   const existingUser = await User.findOne({ email });
   if (existingUser) throw createHttpError(409, 'Email in use');
 
   const hashedPassword = await bcrypt.hash(password, 10);
-  const newUser = await User.create({ name, email, password: hashedPassword });
+  const user = await User.create({ name, email, password: hashedPassword });
 
-  const userObject = newUser.toObject();
-  delete userObject.password;
-  return userObject;
+  const plainUser = user.toObject();
+  delete plainUser.password;
+  return plainUser;
 };
 
 export const loginUserService = async ({ email, password }) => {
@@ -43,8 +41,8 @@ export const loginUserService = async ({ email, password }) => {
     userId: user._id,
     accessToken,
     refreshToken,
-    accessTokenValidUntil: new Date(now.getTime() + ACCESS_TOKEN_EXPIRY),
-    refreshTokenValidUntil: new Date(now.getTime() + REFRESH_TOKEN_EXPIRY),
+    accessTokenValidUntil: new Date(now.getTime() + ACCESS_TOKEN_LIFETIME),
+    refreshTokenValidUntil: new Date(now.getTime() + REFRESH_TOKEN_LIFETIME),
   });
 
   return { accessToken, refreshToken };
@@ -62,28 +60,21 @@ export const refreshSessionService = async (oldRefreshToken) => {
   const userId = decoded.userId;
 
   const accessToken = jwt.sign({ userId }, JWT_SECRET, { expiresIn: '15m' });
-  const newRefreshToken = jwt.sign({ userId }, JWT_SECRET, {
-    expiresIn: '30d',
-  });
+  const refreshToken = jwt.sign({ userId }, JWT_SECRET, { expiresIn: '30d' });
 
   const now = new Date();
   await Session.create({
     userId,
     accessToken,
-    refreshToken: newRefreshToken,
-    accessTokenValidUntil: new Date(now.getTime() + ACCESS_TOKEN_EXPIRY),
-    refreshTokenValidUntil: new Date(now.getTime() + REFRESH_TOKEN_EXPIRY),
+    refreshToken,
+    accessTokenValidUntil: new Date(now.getTime() + ACCESS_TOKEN_LIFETIME),
+    refreshTokenValidUntil: new Date(now.getTime() + REFRESH_TOKEN_LIFETIME),
   });
 
-  return { accessToken, refreshToken: newRefreshToken };
+  return { accessToken, refreshToken };
 };
 
-export const logoutUserService = async (token) => {
-  if (!token) throw createHttpError(401, 'No token provided');
-
-  const deleted = await Session.findOneAndDelete({
-    $or: [{ accessToken: token }, { refreshToken: token }],
-  });
-
-  if (!deleted) throw createHttpError(404, 'Session not found');
+export const logoutUserService = async (refreshToken) => {
+  if (!refreshToken) throw createHttpError(401, 'No refresh token provided');
+  await Session.deleteOne({ refreshToken });
 };
