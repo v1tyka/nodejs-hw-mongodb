@@ -1,8 +1,8 @@
 import bcrypt from 'bcrypt';
 import createHttpError from 'http-errors';
 import jwt from 'jsonwebtoken';
-import { User } from '../models/user.js';
-import { Session } from '../models/session.js';
+import { User } from './models/user.js';
+import { Session } from './models/session.js';
 
 const ACCESS_TOKEN_LIFETIME = 15 * 60 * 1000; // 15 хв
 const REFRESH_TOKEN_LIFETIME = 30 * 24 * 60 * 60 * 1000; // 30 днів
