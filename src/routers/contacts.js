@@ -13,19 +13,18 @@ import {
   createContactSchema,
   updateContactSchema,
 } from '../validation/contactSchemas.js';
+import { authenticate } from '../middlewares/authenticate.js';
 
 const router = Router();
 
-// --- GET all contacts (with pagination) ---
+router.use(authenticate);
+
 router.get('/', ctrlWrapper(fetchAllContacts));
 
-// --- GET contact by ID ---
 router.get('/:contactId', isValidId, ctrlWrapper(fetchContactById));
 
-// --- POST create a new contact ---
 router.post('/', validateBody(createContactSchema), ctrlWrapper(createContact));
 
-// --- PATCH update a contact ---
 router.patch(
   '/:contactId',
   isValidId,
@@ -33,7 +32,6 @@ router.patch(
   ctrlWrapper(patchContact)
 );
 
-// --- DELETE remove a contact ---
 router.delete('/:contactId', isValidId, ctrlWrapper(removeContact));
 
 export default router;
