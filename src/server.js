@@ -1,30 +1,32 @@
 import express from 'express';
 import cors from 'cors';
-import cookieParser from 'cookie-parser'; // ✅ для роботи з cookies
+import cookieParser from 'cookie-parser';
 import pino from 'pino-http';
 import contactsRouter from './routers/contacts.js';
 import authRouter from './routers/auth.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { notFoundHandler } from './middlewares/notFoundHandler.js';
-import { authenticate } from './middlewares/authenticate.js'; // ✅ додаємо middleware
+import { authenticate } from './middlewares/authenticate.js';
 
 export const setupServer = () => {
   const app = express();
 
-  // ✅ Базові middleware
+  // 🔧 Middleware
   app.use(cors({ origin: true, credentials: true }));
   app.use(cookieParser());
   app.use(pino());
   app.use(express.json());
 
-  // ✅ Захищаємо всі роуты контактів
-  app.use('/contacts', authenticate, contactsRouter);
-
-  // ✅ Публічні маршрути
+  // 🚀 Публічні маршрути
   app.use('/auth', authRouter);
 
-  // ✅ Обробка помилок
+  // 🔒 Приватні маршрути (з перевіркою токена)
+  app.use('/contacts', authenticate, contactsRouter);
+
+  // ⚠️ Обробка 404
   app.use(notFoundHandler);
+
+  // 🧨 Глобальна обробка помилок
   app.use(errorHandler);
 
   const PORT = process.env.PORT || 3000;
