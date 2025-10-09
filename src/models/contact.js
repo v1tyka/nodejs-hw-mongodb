@@ -4,29 +4,23 @@ const { Schema, model } = mongoose;
 
 const contactSchema = new Schema(
   {
-    name: {
-      type: String,
-      required: true,
-    },
-    email: {
-      type: String,
-      required: true,
-    },
-    phone: {
-      type: String,
-      required: true,
-    },
-    favorite: {
-      type: Boolean,
-      default: false,
-    },
     userId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: 'User',
-      required: true, // обов'язкове поле
+      required: [true, 'UserId is required'],
+    },
+    name: { type: String, required: true },
+    phoneNumber: { type: String, required: true },
+    email: { type: String },
+    isFavourite: { type: Boolean, default: false },
+    contactType: {
+      type: String,
+      enum: ['work', 'home', 'personal'],
+      required: true,
+      default: 'personal',
     },
   },
-  { versionKey: false, timestamps: true }
+  { timestamps: true }
 );
 
 export const Contact = model('Contact', contactSchema);

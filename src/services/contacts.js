@@ -1,6 +1,6 @@
 import { Contact } from '../models/contact.js';
-import createHttpError from 'http-errors';
 
+// Pagination + sorting + filtering by userId + optional filters (type/isFavourite)
 export const getAllContacts = async (
   userId,
   page = 1,
@@ -13,22 +13,25 @@ export const getAllContacts = async (
   const filter = { userId };
 
   if (type) filter.contactType = type;
-  if (isFavourite !== undefined)
-    filter.isFavourite = isFavourite === 'true' ? true : false;
+  if (typeof isFavourite !== 'undefined') {
+    filter.isFavourite = isFavourite === 'true' || isFavourite === true;
+  }
 
   const skip = (page - 1) * perPage;
   const sortDirection = sortOrder === 'desc' ? -1 : 1;
 
-  const totalItems = await Contact.countDocuments(filter);
-  const contacts = await Contact.find(filter)
-    .sort({ [sortBy]: sortDirection })
-    .skip(skip)
-    .limit(perPage);
+  const [data, totalItems] = await Promise.all([
+    Contact.find(filter)
+      .sort({ [sortBy]: sortDirection })
+      .skip(skip)
+      .limit(perPage),
+    Contact.countDocuments(filter),
+  ]);
 
   const totalPages = Math.ceil(totalItems / perPage);
 
   return {
-    data: contacts,
+    data,
     page,
     perPage,
     totalItems,
@@ -39,30 +42,21 @@ export const getAllContacts = async (
 };
 
 export const getContactById = async (contactId, userId) => {
-  const contact = await Contact.findOne({ _id: contactId, userId });
-  if (!contact) throw createHttpError(404, 'Contact not found');
-  return contact;
+  return await Contact.findOne({ _id: contactId, userId });
 };
 
 export const createNewContact = async (body, userId) => {
-  return await Contact.create({ ...body, userId });
+  const contactData = { ...body, userId };
+  return await Contact.create(contactData);
 };
 
 export const updateContact = async (contactId, body, userId) => {
-  const contact = await Contact.findOneAndUpdate(
-    { _id: contactId, userId },
-    body,
-    {
-      new: true,
-      runValidators: true,
-    }
-  );
-  if (!contact) throw createHttpError(404, 'Contact not found');
-  return contact;
+  return await Contact.findOneAndUpdate({ _id: contactId, userId }, body, {
+    new: true,
+    runValidators: true,
+  });
 };
 
 export const deleteContact = async (contactId, userId) => {
-  const contact = await Contact.findOneAndDelete({ _id: contactId, userId });
-  if (!contact) throw createHttpError(404, 'Contact not found');
-  return contact;
+  return await Contact.findOneAndDelete({ _id: contactId, userId });
 };
