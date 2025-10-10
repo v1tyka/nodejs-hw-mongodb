@@ -11,22 +11,23 @@ import { authenticate } from './middlewares/authenticate.js';
 export const setupServer = () => {
   const app = express();
 
-  // 🔧 Middleware
+  // Middleware
   app.use(cors({ origin: true, credentials: true }));
   app.use(cookieParser());
   app.use(pino());
   app.use(express.json());
 
-  // 🚀 Публічні маршрути
+  // ✅ PUBLIC routes
   app.use('/auth', authRouter);
 
-  // 🔒 Приватні маршрути (з перевіркою токена)
+  // ✅ PROTECTED routes
   app.use('/contacts', authenticate, contactsRouter);
 
-  // ⚠️ Обробка 404
-  app.use(notFoundHandler);
+  // ✅ Debug
+  console.log('✅ Auth routes mounted at /auth');
 
-  // 🧨 Глобальна обробка помилок
+  // Handlers
+  app.use(notFoundHandler);
   app.use(errorHandler);
 
   const PORT = process.env.PORT || 3000;
