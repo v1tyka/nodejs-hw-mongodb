@@ -1,34 +1,24 @@
-/* eslint-disable no-unused-vars */
-import createError from 'http-errors';
 import {
   getAllContacts,
   getContactById,
-  createNewContact,
-  updateContact,
-  deleteContact,
+  createContact,
+  deleContact,
+  upserContact,
 } from '../services/contacts.js';
+import createHttpError from 'http-errors';
+import { parsePaginationParams } from '../utils/parsePaginationParams.js';
+import { parseSortParams } from '../utils/parseSortParams.js';
 
-// GET /contacts
-export const fetchAllContacts = async (req, res, next) => {
-  const {
-    page = 1,
-    perPage = 10,
-    sortBy = 'name',
-    sortOrder = 'asc',
-    type,
-    isFavourite,
-  } = req.query;
-
-  const userId = req.user._id;
+export async function allContactsController(req, res) {
+  const { page, perPage } = parsePaginationParams(req.query);
+  const { sortBy, sortOrder } = parseSortParams(req.query);
 
   const contacts = await getAllContacts(
-    userId,
-    Number(page),
-    Number(perPage),
+    page,
+    perPage,
     sortBy,
     sortOrder,
-    type,
-    isFavourite
+    req.user._id
   );
 
   res.status(200).json({
@@ -36,66 +26,73 @@ export const fetchAllContacts = async (req, res, next) => {
     message: 'Successfully found contacts!',
     data: contacts,
   });
-};
+}
 
-// GET /contacts/:contactId
-export const fetchContactById = async (req, res, next) => {
+export async function contactByIdController(req, res, next) {
   const { contactId } = req.params;
   const userId = req.user._id;
-
   const contact = await getContactById(contactId, userId);
 
   if (!contact) {
-    throw createError(404, 'Contact not found');
+    next(createHttpError(404, 'Contact not found'));
   }
-
   res.status(200).json({
     status: 200,
     message: `Successfully found contact with id ${contactId}!`,
-    data: contact,
+    data: {
+      name: contact.name,
+      phoneNumber: contact.phoneNumber,
+      isFavourite: contact.isFavourite,
+      contactType: contact.contactType,
+      email: contact.email,
+    },
   });
-};
+}
 
-// POST /contacts
-export const createContact = async (req, res, next) => {
-  const userId = req.user._id;
-  const newContact = await createNewContact(req.body, userId);
+export async function createContactController(req, res) {
+  // console.log(req.user._id)
+  const contact = await createContact(req.body, req.user._id);
 
   res.status(201).json({
     status: 201,
-    message: 'Successfully created a contact!',
-    data: newContact,
+    mesage: 'Successfully created a contact!',
+    data: contact,
   });
-};
+}
 
-// PATCH /contacts/:contactId
-export const patchContact = async (req, res, next) => {
+export async function deleContactController(req, res, next) {
   const { contactId } = req.params;
   const userId = req.user._id;
+  const contact = await deleContact(contactId, userId);
 
-  const updatedContact = await updateContact(contactId, req.body, userId);
+  if (!contact) {
+    next(createHttpError(404, 'Contact not found'));
+  }
+  res.status(204).send();
+}
 
-  if (!updatedContact) {
-    throw createError(404, 'Contact not found');
+export async function upsertContactController(req, res, next) {
+  const { contactId } = req.params;
+  const userId = req.user._id;
+  console.log(userId.toString());
+  const contact = await upserContact(contactId, req.body, userId);
+
+  if (!contact) {
+    next(createHttpError(404, 'Contact not found'));
+    return;
+  }
+
+  if (contact.updatedExisting === true) {
+    res.status(200).json({
+      status: 201,
+      message: 'Successfully patched a contact!',
+      data: contact.value,
+    });
   }
 
   res.status(200).json({
     status: 200,
     message: 'Successfully patched a contact!',
-    data: updatedContact,
+    data: contact.value,
   });
-};
-
-// DELETE /contacts/:contactId
-export const removeContact = async (req, res, next) => {
-  const { contactId } = req.params;
-  const userId = req.user._id;
-
-  const deletedContact = await deleteContact(contactId, userId);
-
-  if (!deletedContact) {
-    throw createError(404, 'Contact not found');
-  }
-
-  res.status(204).send();
-};
+}
