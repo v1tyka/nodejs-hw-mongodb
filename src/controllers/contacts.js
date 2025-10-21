@@ -8,7 +8,9 @@ import {
 import createHttpError from 'http-errors';
 import { parsePaginationParams } from '../utils/parsePaginationParams.js';
 import { parseSortParams } from '../utils/parseSortParams.js';
-
+import { getEnvVar } from '../utils/getEnvVar.js';
+import { saveFileToUploadDir } from '../utils/saveFileToUploadDir.js';
+import { saveFileToCloudinary } from '../utils/saveFileToCloudinary.js';
 export async function allContactsController(req, res) {
   const { page, perPage } = parsePaginationParams(req.query);
   const { sortBy, sortOrder } = parseSortParams(req.query);
@@ -50,8 +52,20 @@ export async function contactByIdController(req, res, next) {
 }
 
 export async function createContactController(req, res) {
-  // console.log(req.user._id)
-  const contact = await createContact(req.body, req.user._id);
+  const photo = req.file;
+  const userId = req.user._id;
+
+  let photoUrl;
+  console.log('FILE:', req.file);
+
+  console.log('BODY:', req.body);
+
+  if (getEnvVar('ENABLE_CLOUDINARY') === 'true') {
+    photoUrl = await saveFileToCloudinary(photo);
+  } else {
+    photoUrl = await saveFileToUploadDir(photo);
+  }
+  const contact = await createContact(userId, { ...req.body, photo: photoUrl });
 
   res.status(201).json({
     status: 201,
@@ -74,25 +88,37 @@ export async function deleContactController(req, res, next) {
 export async function upsertContactController(req, res, next) {
   const { contactId } = req.params;
   const userId = req.user._id;
-  console.log(userId.toString());
-  const contact = await upserContact(contactId, req.body, userId);
+  const photo = req.file;
 
-  if (!contact) {
+  let photoUrl;
+
+  if (getEnvVar('ENABLE_CLOUDINARY') === 'true') {
+    photoUrl = await saveFileToCloudinary(photo);
+  } else {
+    photoUrl = await saveFileToUploadDir(photo);
+  }
+
+  const result = await upserContact(contactId, userId, {
+    ...req.body,
+    photo: photoUrl,
+  });
+
+  if (!result) {
     next(createHttpError(404, 'Contact not found'));
     return;
   }
 
-  if (contact.updatedExisting === true) {
+  if (result.updatedExisting === true) {
     res.status(200).json({
       status: 201,
       message: 'Successfully patched a contact!',
-      data: contact.value,
+      data: result,
     });
   }
 
   res.status(200).json({
     status: 200,
     message: 'Successfully patched a contact!',
-    data: contact.value,
+    data: result,
   });
 }
