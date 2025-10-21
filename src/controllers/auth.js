@@ -1,81 +1,98 @@
-import createError from 'http-errors';
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
-import { User } from '../models/user.js';
-import { Session } from '../models/session.js';
-import { logoutUserService } from '../services/auth.js';
+import {
+  registerUser,
+  loginUser,
+  refreshUserSession,
+  logOut,
+  requestResetToken,
+  resetPassword,
+} from '../services/auth.js';
+import { THIRTY_DAYS } from '../constants/index.js';
 
-const ACCESS_TOKEN_LIFETIME = 15 * 60 * 1000; // 15 minutes
-const REFRESH_TOKEN_LIFETIME = 30 * 24 * 60 * 60 * 1000; // 30 days
+export async function registerUserController(req, res) {
+  const contact = await registerUser(req.body);
 
-export const loginUser = async (req, res, next) => {
-  try {
-    const { email, password } = req.body;
+  res.json({
+    status: 201,
+    message: 'Successfully registered a user!',
+    data: contact,
+  });
+}
 
-    const user = await User.findOne({ email });
-    if (!user) throw createError(401, 'Invalid email or password');
+export async function loginUserController(req, res) {
+  const session = await loginUser(req.body);
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) throw createError(401, 'Invalid email or password');
+  res.cookie('sessionId', session._id, {
+    httpOnly: true,
+    expires: new Date(Date.now() + THIRTY_DAYS),
+  });
 
-    await Session.deleteMany({ userId: user._id });
+  res.cookie('refreshToken', session.refreshToken, {
+    httpOnly: true,
+    expires: new Date(Date.now() + THIRTY_DAYS),
+  });
 
-    const accessToken = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: '15m',
-    });
-    const refreshToken = jwt.sign(
-      { userId: user._id },
-      process.env.JWT_SECRET,
-      {
-        expiresIn: '30d',
-      }
-    );
+  res.json({
+    status: 201,
+    message: 'Successfully logged in an user!',
+    data: {
+      accessToken: session.accessToken,
+    },
+  });
+}
 
-    const accessTokenValidUntil = new Date(Date.now() + ACCESS_TOKEN_LIFETIME);
-    const refreshTokenValidUntil = new Date(
-      Date.now() + REFRESH_TOKEN_LIFETIME
-    );
+function setupSession(res, session) {
+  res.cookie('sessionId', session._id, {
+    httpOnly: true,
+    expires: new Date(Date.now() + THIRTY_DAYS),
+  });
 
-    await Session.create({
-      userId: user._id,
-      accessToken,
-      refreshToken,
-      accessTokenValidUntil,
-      refreshTokenValidUntil,
-    });
+  res.cookie('refreshToken', session.refreshToken, {
+    httpOnly: true,
+    expires: new Date(Date.now() + THIRTY_DAYS),
+  });
+}
 
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // true for HTTPS
-      sameSite: 'strict',
-      maxAge: REFRESH_TOKEN_LIFETIME,
-    });
+export async function refreshUserSessionController(req, res) {
+  const session = await refreshUserSession({
+    sessionId: req.cookies.sessionId,
+    refreshToken: req.cookies.refreshToken,
+  });
 
-    res.status(200).json({
-      status: 200,
-      message: 'Successfully logged in user!',
-      data: { accessToken },
-    });
-  } catch (error) {
-    next(error);
+  setupSession(res, session);
+
+  res.json({
+    status: 200,
+    message: 'Successfully refreshed a session!',
+    data: {
+      accessToken: session.accessToken,
+    },
+  });
+}
+
+export async function logOutController(req, res) {
+  if (req.cookies.sessionId) {
+    await logOut(req.cookies.sessionId);
   }
+
+  res.status(204).send();
+}
+
+export const requestResetEmailController = async (req, res) => {
+  await requestResetToken(req.body.email);
+
+  res.json({
+    status: 200,
+    message: 'Reset password email has been successfully sent.',
+    data: {},
+  });
 };
 
-export const logoutUser = async (req, res, next) => {
-  try {
-    const refreshToken = req.cookies?.refreshToken;
-    if (!refreshToken) throw createError(401, 'No refresh token provided');
+export const resetPasswordController = async (req, res) => {
+  await resetPassword(req.body);
 
-    await logoutUserService(refreshToken);
-
-    res.clearCookie('refreshToken', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-    });
-
-    res.status(204).send();
-  } catch (error) {
-    next(error);
-  }
+  res.json({
+    status: 200,
+    message: 'Password has been successfully reset.',
+    data: {},
+  });
 };

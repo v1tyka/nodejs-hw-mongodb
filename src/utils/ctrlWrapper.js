@@ -1,10 +1,9 @@
-export const ctrlWrapper = (ctrl) => {
-  const wrapped = async (req, res, next) => {
+export const ctrlWrapper = (controller) => {
+  return async (req, res, next) => {
     try {
-      await ctrl(req, res, next);
-    } catch (err) {
-      next(err); // ✅ сюди прилітають throw з контролерів
+      await controller(req, res, next);
+    } catch (error) {
+      next(error);
     }
   };
-  return wrapped;
 };
