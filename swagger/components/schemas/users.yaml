@@ -1,0 +1,18 @@
+type: object
+required:
+  - name
+  - email
+  - password
+properties:
+  name:
+    description: 'User name'
+    type: string
+    example: 'Jhon Doe'
+  email:
+    description: 'User email'
+    type: string
+    example: 'panel@gmail.com'
+  password:
+    description: 'User password'
+    type: string
+    example: '12345'

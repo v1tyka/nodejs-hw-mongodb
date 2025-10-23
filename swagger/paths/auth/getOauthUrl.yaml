@@ -1,0 +1,30 @@
+tags:
+  - Auth
+summary: Get oauth url
+operationId: GetOauthUrl
+description: 'Get oauth url'
+security: []
+responses:
+  '200':
+    description: Get oauth url
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - status
+            - message
+            - data
+          properties:
+            status:
+              type: integer
+              example: 200
+            message:
+              type: string
+              example: Successfully send get oauth url!
+            data:
+              type: object
+              example: 'https://accounts.google.com/o/oauth2/v2/auth?scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile&response_type=code&client_id=153300193821-aat5a7bikcvqni6ipblup4ohgu6ra2a3.apps.googleusercontent.com&redirect_uri=h'
+
+  '401':
+    $ref: ../../components/responses/401Unauthorized.yaml

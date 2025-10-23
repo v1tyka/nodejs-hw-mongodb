@@ -24,3 +24,5 @@ export const CLOUDINARY = {
   API_KEY: 'API_KEY',
   CLOUD_NAME: 'CLOUD_NAME',
 };
+
+export const SWAGGER_PATH = path.join(process.cwd(), 'docs', 'swagger.json');
